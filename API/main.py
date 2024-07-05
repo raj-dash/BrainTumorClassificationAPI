@@ -1,7 +1,24 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from fastapi.responses import JSONResponse
+import tensorflow as tf
+import numpy as np
+import os, cv2
+from PIL import Image
 
 app = FastAPI()
+
+tl_model = tf.keras.models.load_model("my_effnet3.keras")
+labels = ['glioma_tumor', 'meningioma_tumor', 'no_tumor', 'pituitary_tumor']
+def img_pred(model, image_filepath):
+    img = Image.open(image_filepath)
+    opencvImage = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+    img = cv2.resize(opencvImage,(150,150))
+    img = img.reshape(1,150,150,3)
+    p = model.predict(img / 255)
+    p = np.argmax(p,axis=1)[0]
+    return p
 
 app.add_middleware(
     CORSMiddleware,
@@ -11,12 +28,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class Prediction(BaseModel):
+    prediction: str
+
 @app.post('/uploadfile/')
 async def create_file_upload(image: UploadFile = File(...)):
 
     data = await image.read()
-    save_to = f"../images/{image.filename}"
-    with open(save_to, "wb") as f:
+    file_path = f"../images/{image.filename}"
+    with open(file_path, "wb") as f:
         f.write(data)
     
-    return {"images" : image.filename}
+    prediction = labels[img_pred(tl_model, file_path)]
+    
+    
+    return {"prediction" : prediction}
