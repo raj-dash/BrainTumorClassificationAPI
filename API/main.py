@@ -9,6 +9,10 @@ from PIL import Image
 
 app = FastAPI()
 
+img_path = "../images"
+if not os.path.exists(img_path):
+    os.mkdir(img_path)
+
 tl_model = tf.keras.models.load_model("my_effnet3.keras")
 labels = ['glioma_tumor', 'meningioma_tumor', 'no_tumor', 'pituitary_tumor']
 def img_pred(model, image_filepath):
