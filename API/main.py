@@ -21,8 +21,9 @@ def img_pred(model, image_filepath):
     img = cv2.resize(opencvImage,(150,150))
     img = img.reshape(1,150,150,3)
     p = model.predict(img / 255)
-    p = np.argmax(p,axis=1)[0]
-    return p
+    pos = np.argmax(p,axis=1)[0]
+    prob = round(p[0][pos] * 100, 2)
+    return pos, prob
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,7 +44,9 @@ async def create_file_upload(image: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(data)
     
-    prediction = labels[img_pred(tl_model, file_path)]
+    prediction, probability = img_pred(tl_model, file_path)
+    print(prediction)
     
     
-    return {"prediction" : prediction}
+    return {"prediction" : labels[prediction], 
+            "probability" : probability}
